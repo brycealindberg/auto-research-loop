@@ -1,0 +1,14 @@
+{
+  "name": "auto-research-loop",
+  "owner": {
+    "name": "Bryce Lindberg"
+  },
+  "plugins": [
+    {
+      "name": "auto-research-loop",
+      "source": "./",
+      "version": "1.0.0",
+      "description": "Autonomous iteration engine — metric-driven keep/discard via git + task completion with scratchpad, gates, and circuit breaker."
+    }
+  ]
+}
