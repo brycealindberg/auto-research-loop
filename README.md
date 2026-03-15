@@ -21,22 +21,23 @@ Two modes:
 
 ## Install
 
-### As a plugin (recommended — gives you slash commands)
+### From marketplace (recommended)
 
 ```bash
-cp -r auto-research-loop ~/.claude/plugins/marketplaces/local-plugins/plugins/auto-research-loop
-chmod +x ~/.claude/plugins/marketplaces/local-plugins/plugins/auto-research-loop/scripts/*.sh
-chmod +x ~/.claude/plugins/marketplaces/local-plugins/plugins/auto-research-loop/hooks/*.sh
+/plugin marketplace add brycealindberg/auto-research-loop
+/plugin install auto-research-loop@auto-research-loop
 ```
 
 Then restart Claude Code. You'll get `/auto-research-loop` and `/auto-research-loop-plan` slash commands.
 
-### As a skill (simpler — no slash commands, triggers from description)
+### Test locally (for development)
 
 ```bash
-cp -r auto-research-loop ~/.claude/skills/auto-research-loop
-chmod +x ~/.claude/skills/auto-research-loop/scripts/*.sh
+git clone https://github.com/brycealindberg/auto-research-loop.git
+claude --plugin-dir ./auto-research-loop
 ```
+
+No restart needed — the plugin loads for that session. Use `/reload-plugins` to pick up changes.
 
 ## Usage
 
@@ -60,7 +61,7 @@ Uses the stop hook — same session, context accumulates. Good for 5-15 iteratio
   --max-iterations 100
 
 # Step 2: Run the bash loop (fresh claude -p per iteration)
-bash ~/.claude/skills/auto-research-loop/scripts/run-loop.sh
+bash scripts/run-loop.sh
 ```
 
 `run-loop.sh` spawns a new `claude -p` process per iteration — clean context every time, like Karpathy's autoresearch. Memory persists via files, not conversation.
@@ -71,7 +72,7 @@ bash ~/.claude/skills/auto-research-loop/scripts/run-loop.sh
 /auto-research-loop-plan
 ```
 
-Interactive 7-phase wizard that helps you pick the right metric, verify command, scope, and direction. Outputs a ready-to-paste `/auto-research-loop` command.
+Interactive 7-phase wizard that helps you pick the right metric, verify command, scope, and direction. Dry-runs the verify command to make sure it works. Outputs a ready-to-paste `/auto-research-loop` command.
 
 ### Task Mode — Complete a task
 
@@ -118,6 +119,7 @@ The agent breaks the task into subtasks, works through them one per iteration, a
 - **Circuit breaker**: Auto-stops after N consecutive stalled iterations (no commits + identical diff).
 - **Task mode never reverts**: `git reset --hard` only runs in metric mode. Task mode just accumulates commits.
 - **30-minute iteration timeout**: `run-loop.sh` kills hung iterations automatically.
+- **Backpressure gates**: Test/lint/typecheck must pass before task completion is accepted.
 
 ## How It Works
 
@@ -144,7 +146,6 @@ LOOP (fresh context each iteration):
 | `.claude/auto-research-loop.local.md` | State file (delete to stop the loop) |
 | `.claude/auto-research-loop-scratchpad.md` | Persistent memory across iterations |
 | `.claude/auto-research-loop-log.jsonl` | Structured iteration logs (15 fields + cost estimates) |
-| `.claude/settings.local.json` | Stop hook configuration (auto-installed) |
 | `IMPLEMENTATION_PLAN.md` | Task tracking with subtasks |
 | `autoresearch-results.tsv` | Metric mode experiment journal (keep/discard/crash) |
 
@@ -179,7 +180,7 @@ LOOP (fresh context each iteration):
   --verify "python train.py --quick 2>&1 | grep LOCO | awk '{print \$3}'" \
   --scope "train.py" --read-only "evaluate.py" \
   --timeout 600 --branch loco-experiments --max-iterations 100
-# Then: bash ~/.claude/skills/auto-research-loop/scripts/run-loop.sh
+# Then: bash scripts/run-loop.sh
 ```
 
 ## Architecture
@@ -209,6 +210,7 @@ Built from two proven systems:
 auto-research-loop/
   .claude-plugin/
     plugin.json                              # Plugin manifest
+    marketplace.json                         # Self-hosted marketplace config
   commands/
     auto-research-loop.md                    # /auto-research-loop slash command
     auto-research-loop-plan.md               # /auto-research-loop-plan wizard
@@ -216,11 +218,11 @@ auto-research-loop/
     hooks.json                               # Auto-registers stop hook
     stop-hook.sh                             # Same-session loop mechanism
   scripts/
-    setup-auto-research-loop.sh              # Creates infrastructure + installs hook
+    setup-auto-research-loop.sh              # Creates infrastructure + state file
     run-loop.sh                              # Overnight launcher (fresh context per iteration)
   skills/
     auto-research-loop/
-      SKILL.md                               # Skill entry point (447 words)
+      SKILL.md                               # Skill entry point
       references/
         autonomous-loop-protocol.md          # Full 9-phase loop protocol
         core-principles.md                   # 7 autoresearch principles
