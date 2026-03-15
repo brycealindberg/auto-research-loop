@@ -1,0 +1,8 @@
+{
+  "name": "auto-research-loop",
+  "version": "1.0.0",
+  "description": "Autonomous iteration engine combining Karpathy's autoresearch (metric-driven keep/discard via git) with Ralph Loop infrastructure (scratchpad, gates, circuit breaker). Two modes: metric mode for optimizing numbers, task mode for completing work.",
+  "author": {
+    "name": "Bryce Lindberg"
+  }
+}
