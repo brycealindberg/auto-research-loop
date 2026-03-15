@@ -1,6 +1,6 @@
 # Auto Research Loop
 
-A Claude Code skill that combines [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) methodology with Ralph Loop infrastructure into a unified autonomous iteration engine.
+A Claude Code plugin combining [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) methodology with Ralph Loop infrastructure into a unified autonomous iteration engine.
 
 **Go to sleep. Wake up to results.**
 
@@ -8,18 +8,30 @@ A Claude Code skill that combines [Karpathy's autoresearch](https://github.com/k
 
 You give it a goal and a way to measure progress. It loops autonomously — making one change per iteration, verifying the result, keeping improvements, reverting regressions — until the metric hits your target or you stop it.
 
+Each iteration gets a **fresh context window** (via `run-loop.sh`), so it can run 100+ iterations overnight without hitting context limits. Memory persists via scratchpad, git history, and results TSV — not conversation.
+
 Two modes:
 
 | | Metric Mode | Task Mode |
 |---|---|---|
 | **For** | Optimizing a number | Completing a task |
 | **Decision** | Metric improved? Keep commit. Worse? `git revert` | Accumulate work toward completion |
-| **Exit** | Max iterations or manual stop | Completion promise met |
+| **Exit** | Max iterations or manual stop | Completion promise met + gates pass |
 | **Example** | "Get test coverage to 90%" | "Build auth system with JWT" |
 
 ## Install
 
-Copy to your Claude Code skills directory:
+### As a plugin (recommended — gives you slash commands)
+
+```bash
+cp -r auto-research-loop ~/.claude/plugins/marketplaces/local-plugins/plugins/auto-research-loop
+chmod +x ~/.claude/plugins/marketplaces/local-plugins/plugins/auto-research-loop/scripts/*.sh
+chmod +x ~/.claude/plugins/marketplaces/local-plugins/plugins/auto-research-loop/hooks/*.sh
+```
+
+Then restart Claude Code. You'll get `/auto-research-loop` and `/auto-research-loop-plan` slash commands.
+
+### As a skill (simpler — no slash commands, triggers from description)
 
 ```bash
 cp -r auto-research-loop ~/.claude/skills/auto-research-loop
@@ -28,22 +40,38 @@ chmod +x ~/.claude/skills/auto-research-loop/scripts/*.sh
 
 ## Usage
 
-### Metric Mode — Improve a number
+### Two ways to run
 
+**Interactive (short runs, watch it work):**
 ```bash
 /auto-research-loop "Increase test coverage to 90%" \
   --metric coverage --direction higher \
   --verify "pytest --cov=src | grep TOTAL | awk '{print \$4}'" \
-  --scope "tests/**/*.py" \
-  --max-iterations 30
+  --max-iterations 10
+```
+Uses the stop hook — same session, context accumulates. Good for 5-15 iterations.
+
+**Overnight (100+ iterations, fresh context each time):**
+```bash
+# Step 1: Set up (creates state file, branch, baseline)
+/auto-research-loop "Increase test coverage to 90%" \
+  --metric coverage --direction higher \
+  --verify "pytest --cov=src | grep TOTAL | awk '{print \$4}'" \
+  --max-iterations 100
+
+# Step 2: Run the bash loop (fresh claude -p per iteration)
+bash ~/.claude/skills/auto-research-loop/scripts/run-loop.sh
 ```
 
-The skill automatically:
-- Creates an isolated `autoresearch/arl-*` branch (safe by default)
-- Captures the baseline metric
-- Installs a stop hook that re-feeds the prompt after each iteration
-- Runs the verify command, compares to best, keeps or `git reset --hard HEAD~1`
-- Logs every experiment to `autoresearch-results.tsv`
+`run-loop.sh` spawns a new `claude -p` process per iteration — clean context every time, like Karpathy's autoresearch. Memory persists via files, not conversation.
+
+### Planning wizard
+
+```bash
+/auto-research-loop-plan
+```
+
+Interactive 7-phase wizard that helps you pick the right metric, verify command, scope, and direction. Outputs a ready-to-paste `/auto-research-loop` command.
 
 ### Task Mode — Complete a task
 
@@ -86,14 +114,15 @@ The agent breaks the task into subtasks, works through them one per iteration, a
 ## Safety
 
 - **Auto-branch in metric mode**: Forgetting `--branch` auto-creates `autoresearch/arl-<timestamp>`. Your main branch is never touched by `git reset`.
-- **Read-only protection**: `--read-only "tests/conftest.py"` tells the agent the evaluation logic is locked. Improves the code, not the measurement.
+- **Read-only protection**: `--read-only "tests/conftest.py"` locks evaluation files so the agent can't game the metric.
 - **Circuit breaker**: Auto-stops after N consecutive stalled iterations (no commits + identical diff).
 - **Task mode never reverts**: `git reset --hard` only runs in metric mode. Task mode just accumulates commits.
+- **30-minute iteration timeout**: `run-loop.sh` kills hung iterations automatically.
 
 ## How It Works
 
 ```
-LOOP:
+LOOP (fresh context each iteration):
   0. Read scratchpad (persistent memory across iterations)
   1. Review state + git log + results/plan
   2. Ideate: fix crashes > exploit wins > explore > simplify > radical
@@ -101,8 +130,8 @@ LOOP:
   4. Commit: git commit BEFORE verification
   5. Verify: run metric command or gate commands
   6. Decide:
-     Metric mode: IMPROVED → keep. WORSE → git reset --hard HEAD~1
-     Task mode: gates pass + promise true → exit
+     Metric mode: IMPROVED -> keep. WORSE -> git reset --hard HEAD~1
+     Task mode: gates pass + promise true -> exit
   7. Log results
   8. Update scratchpad
   9. Repeat (NEVER STOP)
@@ -114,7 +143,7 @@ LOOP:
 |------|---------|
 | `.claude/auto-research-loop.local.md` | State file (delete to stop the loop) |
 | `.claude/auto-research-loop-scratchpad.md` | Persistent memory across iterations |
-| `.claude/auto-research-loop-log.jsonl` | Structured iteration logs with timing + cost estimates |
+| `.claude/auto-research-loop-log.jsonl` | Structured iteration logs (15 fields + cost estimates) |
 | `.claude/settings.local.json` | Stop hook configuration (auto-installed) |
 | `IMPLEMENTATION_PLAN.md` | Task tracking with subtasks |
 | `autoresearch-results.tsv` | Metric mode experiment journal (keep/discard/crash) |
@@ -144,12 +173,13 @@ LOOP:
   --verify "npm test && wc -l src/auth/**/*.ts | tail -1 | awk '{print \$1}'" \
   --read-only "tests/**" --test-cmd "npm test"
 
-# Overnight ML experiment
+# Overnight ML experiment (use run-loop.sh for fresh context)
 /auto-research-loop "Improve LOCO-CV AUC above 0.75" \
   --metric loco_auc --direction higher \
   --verify "python train.py --quick 2>&1 | grep LOCO | awk '{print \$3}'" \
   --scope "train.py" --read-only "evaluate.py" \
-  --timeout 600 --branch loco-experiments
+  --timeout 600 --branch loco-experiments --max-iterations 100
+# Then: bash ~/.claude/skills/auto-research-loop/scripts/run-loop.sh
 ```
 
 ## Architecture
@@ -157,41 +187,54 @@ LOOP:
 Built from two proven systems:
 
 **From [Karpathy's autoresearch](https://github.com/karpathy/autoresearch):**
+- Fresh context per iteration (via `run-loop.sh` bash launcher)
 - Metric-driven keep/discard via git
 - Results TSV as experiment journal
 - Simplicity pressure ("0.5% improvement + 20 lines ugly = discard")
-- Read-only file protection
+- Read-only file protection (can't game the metric)
 - Experiment branch isolation
 
 **From Ralph Loop:**
 - Stop hook that mechanically blocks exit and re-feeds the prompt
-- Persistent scratchpad for cross-iteration memory
-- Implementation plan with task tracking
-- Backpressure gates (test/lint/typecheck)
-- Circuit breaker (stall detection)
+- Persistent scratchpad for cross-iteration memory (with mtime enforcement)
+- Implementation plan with task tracking + stall/empty/done warnings
+- Backpressure gates (test/lint/typecheck with 60s timeout)
+- Circuit breaker (stall detection via diff hash + commit tracking)
 - Structured JSONL logging with cost estimates
+- Completion promise with anti-circumvention language
 
 ## File Structure
 
 ```
 auto-research-loop/
-  SKILL.md                                    # Entry point (447 words)
+  .claude-plugin/
+    plugin.json                              # Plugin manifest
+  commands/
+    auto-research-loop.md                    # /auto-research-loop slash command
+    auto-research-loop-plan.md               # /auto-research-loop-plan wizard
+  hooks/
+    hooks.json                               # Auto-registers stop hook
+    stop-hook.sh                             # Same-session loop mechanism
   scripts/
     setup-auto-research-loop.sh              # Creates infrastructure + installs hook
-    stop-hook.sh                              # Loop mechanism (intercepts exit)
-  references/
-    autonomous-loop-protocol.md              # Full 9-phase loop protocol
-    core-principles.md                       # 7 autoresearch principles
-    results-logging.md                       # TSV format spec
-    plan-workflow.md                         # /auto-research-loop:plan wizard
+    run-loop.sh                              # Overnight launcher (fresh context per iteration)
+  skills/
+    auto-research-loop/
+      SKILL.md                               # Skill entry point (447 words)
+      references/
+        autonomous-loop-protocol.md          # Full 9-phase loop protocol
+        core-principles.md                   # 7 autoresearch principles
+        results-logging.md                   # TSV format spec
+        plan-workflow.md                     # Planning wizard protocol
 ```
 
 ## Stopping the Loop
 
-Three ways:
+Four ways:
 1. **Delete the state file**: `rm .claude/auto-research-loop.local.md`
 2. **Max iterations**: Set `--max-iterations N`
-3. **Circuit breaker**: Triggers automatically after N consecutive stalls
+3. **Completion promise**: Task mode exits when promise is TRUE + gates pass
+4. **Circuit breaker**: Triggers automatically after N consecutive stalls
 
 ## License
 
