@@ -12,14 +12,14 @@ Combines [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) wit
 **`/auto-research-loop [PROMPT] [FLAGS]`** — Run the loop:
 
 ```!
-"$HOME/.claude/skills/auto-research-loop/scripts/setup-auto-research-loop.sh" $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-auto-research-loop.sh" $ARGUMENTS
 ```
 
 Then follow the injected instructions. The stop hook auto-installs and intercepts exit to re-feed the prompt.
 
-**`/auto-research-loop:plan`** — Interactive planning wizard:
+**`/auto-research-loop-plan`** — Interactive planning wizard:
 
-Don't run the setup script. Instead, read `references/plan-workflow.md` and walk the user through 7 phases to build a validated configuration:
+Don't run the setup script. Instead, read `${CLAUDE_PLUGIN_ROOT}/skills/auto-research-loop/references/plan-workflow.md` and walk the user through 7 phases to build a validated configuration:
 1. Capture goal
 2. Analyze codebase context
 3. Define scope (which files to modify)
@@ -28,7 +28,7 @@ Don't run the setup script. Instead, read `references/plan-workflow.md` and walk
 6. Define verify command (dry-run it to confirm it works)
 7. Confirm and launch — output a ready-to-paste `/auto-research-loop` command
 
-Use this wizard when the user says "help me set up", "plan a run", "what should my metric be", or invokes `:plan`.
+Use this wizard when the user says "help me set up", "plan a run", "what should my metric be", or invokes the plan command.
 
 ## Two Modes
 
@@ -57,7 +57,7 @@ LOOP:
   9. Repeat
 ```
 
-Read `references/autonomous-loop-protocol.md` for full protocol.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/auto-research-loop/references/autonomous-loop-protocol.md` for full protocol.
 
 ## Critical Rules
 
@@ -76,12 +76,5 @@ Read `references/autonomous-loop-protocol.md` for full protocol.
 | Bundle size | KB | lower | `npm run build \| grep size` | `src/**/*.ts` |
 | ML training | val_bpb | lower | `uv run train.py \| grep val_bpb` | `train.py` |
 | Performance | ms | lower | `npm run bench \| grep p95` | target files |
-
-## References
-
-- `references/autonomous-loop-protocol.md` — Full loop protocol with both modes
-- `references/core-principles.md` — 7 autoresearch principles
-- `references/results-logging.md` — TSV format
-- `references/plan-workflow.md` — `/auto-research-loop:plan` wizard
 
 To manually stop: `rm .claude/auto-research-loop.local.md`

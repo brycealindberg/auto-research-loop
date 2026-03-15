@@ -7,7 +7,7 @@ argument-hint: "[GOAL]"
 
 Do NOT run the setup script. Instead, walk the user through 7 phases to build a validated configuration.
 
-Read `${CLAUDE_PLUGIN_ROOT}/references/plan-workflow.md` for the full wizard protocol.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/auto-research-loop/references/plan-workflow.md` for the full wizard protocol.
 
 ## Quick Summary
 

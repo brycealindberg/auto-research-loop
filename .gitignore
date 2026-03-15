@@ -1,0 +1,11 @@
+# Runtime artifacts (created when the loop runs)
+.claude/auto-research-loop.local.md
+.claude/auto-research-loop-scratchpad.md
+.claude/auto-research-loop-log.jsonl
+.claude/auto-research-loop-log-*.jsonl
+.claude/.auto-research-loop-scratchpad-mtime
+.claude/auto-research-loop-last-output.txt
+.claude/auto-research-loop-claude-stderr.log
+.claude/settings.local.json
+autoresearch-results.tsv
+IMPLEMENTATION_PLAN.md

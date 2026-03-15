@@ -23,7 +23,7 @@ VERIFY_TIMEOUT=300
 if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then
   STOP_HOOK_PATH="${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"
 else
-  STOP_HOOK_PATH="$HOME/.claude/skills/auto-research-loop/scripts/stop-hook.sh"
+  STOP_HOOK_PATH="$HOME/.claude/skills/auto-research-loop/hooks/stop-hook.sh"
 fi
 
 while [[ $# -gt 0 ]]; do

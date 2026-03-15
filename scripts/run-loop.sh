@@ -277,7 +277,13 @@ ${PROMPT}"
 
   # --- Circuit breaker ---
   CURRENT_DIFF=$(git diff 2>/dev/null; git diff --cached 2>/dev/null; git status --porcelain 2>/dev/null)
-  CURRENT_HASH=$(echo "$CURRENT_DIFF" | md5 -q 2>/dev/null || echo "$CURRENT_DIFF" | md5sum 2>/dev/null | awk '{print $1}' || shasum -a 256 2>/dev/null | awk '{print $1}')
+  if command -v md5sum >/dev/null 2>&1; then
+    CURRENT_HASH=$(echo "$CURRENT_DIFF" | md5sum | awk '{print $1}')
+  elif command -v md5 >/dev/null 2>&1; then
+    CURRENT_HASH=$(echo "$CURRENT_DIFF" | md5 -q)
+  else
+    CURRENT_HASH=$(echo "$CURRENT_DIFF" | shasum -a 256 | awk '{print $1}')
+  fi
   CURRENT_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "none")
   PREV_HEAD=$(_read_key "$STATE_FILE" "last_head_hash")
 
