@@ -1,4 +1,4 @@
-# Plan Workflow — /autoresearch:plan
+# Plan Workflow — /auto-research-loop:plan
 
 Convert a textual goal into a validated, ready-to-execute autoresearch configuration.
 
@@ -6,7 +6,7 @@ Convert a textual goal into a validated, ready-to-execute autoresearch configura
 
 ## Trigger
 
-- User invokes `/autoresearch:plan`
+- User invokes `/auto-research-loop:plan`
 - User says "help me set up autoresearch", "plan an autoresearch run", "what should my metric be"
 
 ## Workflow

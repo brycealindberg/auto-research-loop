@@ -9,13 +9,26 @@ Combines [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) wit
 
 ## Invocation
 
-Execute the setup script to initialize the loop:
+**`/auto-research-loop [PROMPT] [FLAGS]`** — Run the loop:
 
 ```!
 "$HOME/.claude/skills/auto-research-loop/scripts/setup-auto-research-loop.sh" $ARGUMENTS
 ```
 
-Then follow the injected instructions in the state file. The stop hook at `~/.claude/skills/auto-research-loop/scripts/stop-hook.sh` auto-installs and intercepts exit to re-feed the prompt.
+Then follow the injected instructions. The stop hook auto-installs and intercepts exit to re-feed the prompt.
+
+**`/auto-research-loop:plan`** — Interactive planning wizard:
+
+Don't run the setup script. Instead, read `references/plan-workflow.md` and walk the user through 7 phases to build a validated configuration:
+1. Capture goal
+2. Analyze codebase context
+3. Define scope (which files to modify)
+4. Define metric (must be mechanical — a command that outputs a number)
+5. Define direction (higher or lower is better)
+6. Define verify command (dry-run it to confirm it works)
+7. Confirm and launch — output a ready-to-paste `/auto-research-loop` command
+
+Use this wizard when the user says "help me set up", "plan a run", "what should my metric be", or invokes `:plan`.
 
 ## Two Modes
 
